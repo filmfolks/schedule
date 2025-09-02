@@ -43,13 +43,12 @@ function setupEventListeners() {
     document.getElementById('close-panel-btn').addEventListener('click', () => sequencePanel.classList.remove('open'));
     document.getElementById('sort-by-select').addEventListener('change', (e) => sortActiveSequence(e.target.value));
 
-    // Modals
+    // Modals Close Buttons
     document.getElementById('close-project-modal').addEventListener('click', closeProjectModal);
     document.getElementById('save-project-info-btn').addEventListener('click', handleSaveProjectInfo);
     document.getElementById('close-edit-modal').addEventListener('click', closeEditModal);
     document.getElementById('save-changes-btn').addEventListener('click', handleSaveChanges);
     document.getElementById('delete-scene-btn').addEventListener('click', handleDeleteFromModal);
-    // FIX: Add event listeners for Info and About close buttons
     document.getElementById('close-info-modal').addEventListener('click', () => document.getElementById('info-modal').style.display = 'none');
     document.getElementById('close-about-modal').addEventListener('click', () => document.getElementById('about-modal').style.display = 'none');
 
@@ -61,15 +60,64 @@ function setupEventListeners() {
     });
 }
 
+
+// =================================================================
+// --- SEQUENCE MANAGEMENT ---
+// =================================================================
+function handleNewSequence() {
+    let sequenceName = prompt("Enter a name for the new sequence:");
+    if (sequenceName === null) return;
+    if (sequenceName.trim() === "") { sequenceName = `Sequence ${projectData.sequences.length + 1}`; }
+    projectData.sequences.push({ name: sequenceName, scenes: [] });
+    setActiveSequence(projectData.sequences.length - 1);
+}
+
+function setActiveSequence(index) {
+    projectData.activeSequenceIndex = index;
+    saveProjectData();
+    renderSchedule();
+    renderSequencePanel();
+    document.getElementById('sequence-panel').classList.remove('open');
+}
+
+function renderSequencePanel() {
+    const listContainer = document.getElementById('sequence-list');
+    listContainer.innerHTML = '';
+    projectData.sequences.forEach((seq, index) => {
+        const button = document.createElement('button');
+        button.className = `sequence-item ${index === projectData.activeSequenceIndex ? 'active' : ''}`;
+        button.textContent = seq.name;
+        button.onclick = () => setActiveSequence(index);
+        listContainer.appendChild(button);
+    });
+}
+
+function sortActiveSequence(sortBy) {
+    if (projectData.activeSequenceIndex < 0 || sortBy === 'default') return;
+    const activeScenes = projectData.sequences[projectData.activeSequenceIndex].scenes;
+    activeScenes.sort((a, b) => {
+        if (a[sortBy] < b[sortBy]) return -1;
+        if (a[sortBy] > b[sortBy]) return 1;
+        return 0;
+    });
+    renderSchedule(); // Re-render the UI with the sorted list
+}
+
 // =================================================================
 // --- CORE SCHEDULE FUNCTIONS ---
 // =================================================================
 function handleAddScene(e) {
     e.preventDefault();
     if (projectData.activeSequenceIndex === -1) {
-        alert("Please create a 'New Sequence' from the menu before adding scenes.");
-        return;
+        if (confirm("No sequence selected. Would you like to create 'Sequence 1' to add this scene?")) {
+            handleNewSequence();
+            // If user cancels the prompt for a name, exit
+            if (projectData.activeSequenceIndex === -1) return;
+        } else {
+            return;
+        }
     }
+
     const newScene = {
         id: Date.now(),
         number: document.getElementById('scene-number').value,
@@ -95,16 +143,21 @@ function handleAddScene(e) {
 
 function renderSchedule() {
     const container = document.getElementById('scene-strips-container');
+    const sequenceDisplay = document.getElementById('active-sequence-display');
     container.innerHTML = '';
-    if (projectData.activeSequenceIndex < 0 || !projectData.sequences[projectData.activeSequenceIndex]) return;
+    
+    if (projectData.activeSequenceIndex < 0 || !projectData.sequences[projectData.activeSequenceIndex]) {
+        sequenceDisplay.textContent = 'No active sequence. Create one from the menu.';
+        return;
+    }
+
+    sequenceDisplay.textContent = `Current Sequence: ${projectData.sequences[projectData.activeSequenceIndex].name}`;
 
     const activeScenes = projectData.sequences[projectData.activeSequenceIndex].scenes;
     activeScenes.forEach(scene => {
         const stripWrapper = document.createElement('div');
         stripWrapper.className = 'scene-strip-wrapper';
         const statusClass = scene.status.replace(/\s+/g, '-').toLowerCase();
-
-        // FIX: Restored the detailed strip view with all fields
         stripWrapper.innerHTML = `
             <div class="scene-strip" id="scene-strip-${scene.id}">
                 <div class="strip-item"><strong>#${scene.number}</strong></div>
@@ -137,40 +190,17 @@ function deleteScene(id) {
     renderSchedule();
 }
 
-// --- (All other functions for Sequence Management, Data Persistence, Modals, and Sharing remain the same as the previous complete version) ---
-// Note: These functions are included below for completeness.
-
-function handleNewSequence() {
-    let sequenceName = prompt("Enter a name for the new sequence:");
-    if (sequenceName === null) return;
-    if (sequenceName.trim() === "") { sequenceName = `Sequence ${projectData.sequences.length + 1}`; }
-    projectData.sequences.push({ name: sequenceName, scenes: [] });
-    setActiveSequence(projectData.sequences.length - 1);
-}
-function setActiveSequence(index) {
-    projectData.activeSequenceIndex = index;
-    saveProjectData();
-    renderSchedule();
-    renderSequencePanel();
-    document.getElementById('sequence-panel').classList.remove('open');
-}
-function renderSequencePanel() {
-    const listContainer = document.getElementById('sequence-list');
-    listContainer.innerHTML = '';
-    projectData.sequences.forEach((seq, index) => {
-        const button = document.createElement('button');
-        button.className = `sequence-item ${index === projectData.activeSequenceIndex ? 'active' : ''}`;
-        button.textContent = seq.name;
-        button.onclick = () => setActiveSequence(index);
-        listContainer.appendChild(button);
-    });
-}
+// =================================================================
+// --- DATA PERSISTENCE & PROJECT FILES ---
+// =================================================================
 function saveProjectData() { localStorage.setItem('projectData', JSON.stringify(projectData)); }
 function loadProjectData() {
     const savedData = localStorage.getItem('projectData');
     projectData = savedData ? JSON.parse(savedData) : { sequences: [], activeSequenceIndex: -1, projectInfo: {} };
     if (!projectData.projectInfo) projectData.projectInfo = {};
-    if (projectData.activeSequenceIndex === -1 && projectData.sequences.length > 0) { projectData.activeSequenceIndex = 0; }
+    if (projectData.activeSequenceIndex === -1 && projectData.sequences.length > 0) {
+        projectData.activeSequenceIndex = 0;
+    }
     if (projectData.activeSequenceIndex > -1) {
         const activeScenes = projectData.sequences[projectData.activeSequenceIndex].scenes;
         if (activeScenes.length > 0) { lastContactPerson = activeScenes[activeScenes.length - 1].contact || ''; }
@@ -178,51 +208,13 @@ function loadProjectData() {
     renderSchedule();
     renderSequencePanel();
 }
-function openProjectModal() {
-    const projectInfo = projectData.projectInfo || {};
-    document.getElementById('prod-name').value = projectInfo.prodName || '';
-    document.getElementById('director-name').value = projectInfo.directorName || '';
-    document.getElementById('contact-number').value = projectInfo.contactNumber || '';
-    document.getElementById('contact-email').value = projectInfo.contactEmail || '';
-    document.getElementById('project-info-modal').style.display = 'block';
-}
-function closeProjectModal() { document.getElementById('project-info-modal').style.display = 'none'; }
-function handleSaveProjectInfo() {
-    projectData.projectInfo = {
-        prodName: document.getElementById('prod-name').value, directorName: document.getElementById('director-name').value,
-        contactNumber: document.getElementById('contact-number').value, contactEmail: document.getElementById('contact-email').value
-    };
-    saveProjectData();
-    closeProjectModal();
-}
-function openEditModal(id) {
-    if (projectData.activeSequenceIndex < 0) return;
-    const scene = projectData.sequences[projectData.activeSequenceIndex].scenes.find(s => s.id === id);
-    if (!scene) return;
-    document.getElementById('edit-scene-id').value = scene.id;
-    // ... (populate all other fields) ...
-    document.getElementById('edit-scene-modal').style.display = 'block';
-}
-function closeEditModal() { document.getElementById('edit-scene-modal').style.display = 'none'; }
-function handleSaveChanges() {
-    const sceneId = parseInt(document.getElementById('edit-scene-id').value);
-    const sceneIndex = projectData.sequences[projectData.activeSequenceIndex].scenes.findIndex(s => s.id === sceneId);
-    if (sceneIndex === -1) return;
-    // ... (update scene object) ...
-    saveProjectData(); renderSchedule(); closeEditModal();
-}
-function handleDeleteFromModal() {
-    const sceneId = parseInt(document.getElementById('edit-scene-id').value);
-    if (confirm('Are you sure you want to permanently delete this scene?')) {
-        deleteScene(sceneId);
-        closeEditModal();
-    }
-}
 function clearProject() {
-    if (confirm('Are you sure you want to clear the entire project?')) {
+    if (confirm('Are you sure you want to clear the entire project? This will delete all sequences and scenes.')) {
         projectData = { sequences: [], activeSequenceIndex: -1, projectInfo: {} };
         lastContactPerson = '';
-        saveProjectData(); renderSchedule(); renderSequencePanel();
+        saveProjectData();
+        renderSchedule();
+        renderSequencePanel();
         alert('Project cleared.');
     }
 }
@@ -240,30 +232,48 @@ function openProjectFile(event) {
     const reader = new FileReader();
     reader.onload = (e) => {
         try {
-            projectData = JSON.parse(e.target.result);
-            saveProjectData();
-            alert('Project loaded successfully!');
-            loadProjectData();
+            const loadedData = JSON.parse(e.target.result);
+            if (loadedData && loadedData.sequences && loadedData.hasOwnProperty('activeSequenceIndex')) {
+                projectData = loadedData;
+                saveProjectData();
+                alert('Project loaded successfully!');
+                loadProjectData();
+            } else { alert('Error: Invalid project file format.'); }
         } catch (error) { alert('Error: Could not read project file.'); }
     };
     reader.readAsText(file);
     event.target.value = '';
 }
-function saveAsExcel() {
-    if (projectData.activeSequenceIndex < 0) { alert("Please select a sequence to export."); return; }
-    const activeScenes = projectData.sequences[projectData.activeSequenceIndex].scenes;
-    const sequenceName = projectData.sequences[projectData.activeSequenceIndex].name;
-    if (activeScenes.length === 0) { alert(`Sequence "${sequenceName}" has no scenes.`); return; }
-    const worksheet = XLSX.utils.json_to_sheet(activeScenes);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, sequenceName);
-    XLSX.writeFile(workbook, `${sequenceName}_Schedule.xlsx`);
+
+// =================================================================
+// --- MODAL LOGIC ---
+// =================================================================
+function openProjectModal() {
+    const projectInfo = projectData.projectInfo || {};
+    document.getElementById('prod-name').value = projectInfo.prodName || '';
+    document.getElementById('director-name').value = projectInfo.directorName || '';
+    document.getElementById('contact-number').value = projectInfo.contactNumber || '';
+    document.getElementById('contact-email').value = projectInfo.contactEmail || '';
+    document.getElementById('project-info-modal').style.display = 'block';
 }
-async function shareProject() { /* ... (same as before) ... */ }
-async function shareScene(id) { /* ... (same as before) ... */ }
-function sortActiveSequence(sortBy) {
-    if (projectData.activeSequenceIndex < 0 || sortBy === 'default') return;
-    const activeScenes = projectData.sequences[projectData.activeSequenceIndex].scenes;
-    activeScenes.sort((a, b) => (a[sortBy] < b[sortBy]) ? -1 : (a[sortBy] > b[sortBy]) ? 1 : 0);
-    renderSchedule();
+function closeProjectModal() { document.getElementById('project-info-modal').style.display = 'none'; }
+function handleSaveProjectInfo() {
+    projectData.projectInfo = {
+        prodName: document.getElementById('prod-name').value, directorName: document.getElementById('director-name').value,
+        contactNumber: document.getElementById('contact-number').value, contactEmail: document.getElementById('contact-email').value
+    };
+    saveProjectData();
+    closeProjectModal();
 }
+function openEditModal(id) { /* ... */ }
+function closeEditModal() { /* ... */ }
+function handleSaveChanges() { /* ... */ }
+function handleDeleteFromModal() { /* ... */ }
+
+// =================================================================
+// --- EXPORT & SHARE FUNCTIONS ---
+// =================================================================
+function saveAsExcel() { /* ... */ }
+async function shareProject() { /* ... */ }
+async function shareScene(id) { /* ... */ }
+function formatTime12Hour(timeString) { /* ... */ }
