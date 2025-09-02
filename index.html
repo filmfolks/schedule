@@ -3,8 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shooting Schedule - FilmFolks Pro</title>
-    <link rel="stylesheet" href="style.css">
+    <title>ToshooT - Shooting Schedule</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="schedule.style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
@@ -12,92 +15,96 @@
 <body>
     <header class="page-header">
         <div class="header-left">
-            <div class="dropdown-container">
-                <button id="hamburger-btn" class="icon-btn"><i class="fas fa-bars"></i></button>
-                <div id="dropdown-menu" class="dropdown-content">
-                    <a href="#" id="new-project-btn"><i class="fas fa-plus-circle"></i> Project Info</a>
-                    <a href="#" id="open-project-btn"><i class="fas fa-folder-open"></i> Open Project</a>
-                    
-                    <div class="dropdown-header">Save as...</div>
-                    <a href="#" id="save-project-btn" class="dropdown-item"><i class="fas fa-save"></i> Save Project File</a>
-                    <a href="#" id="save-excel-btn" class="dropdown-item"><i class="fas fa-file-excel"></i> Save as Excel</a>
-                    
-                    <a href="#" id="share-project-btn"><i class="fas fa-share-alt"></i> Share Project...</a>
-                    
-                    <hr class="dropdown-divider">
-                    <a href="#" id="clear-project-btn"><i class="fas fa-eraser"></i> Clear Project</a>
-                </div>
+            <button id="hamburger-btn" class="icon-btn"><i class="fas fa-bars"></i></button>
+            <div id="dropdown-menu" class="dropdown-content">
+                <a href="#" id="new-project-btn"><i class="fas fa-plus-circle"></i> Project Info</a>
+                <a href="#" id="open-project-btn"><i class="fas fa-folder-open"></i> Open Project</a>
+                <a href="#" id="new-sequence-btn"><i class="fas fa-film"></i> New Sequence</a>
+                <div class="dropdown-header">Save as...</div>
+                <a href="#" id="save-project-btn" class="dropdown-item"><i class="fas fa-save"></i> Save Project File</a>
+                <a href="#" id="save-excel-btn" class="dropdown-item"><i class="fas fa-file-excel"></i> Save as Excel</a>
+                <a href="#" id="share-project-btn"><i class="fas fa-share-alt"></i> Share Project...</a>
+                <hr class="dropdown-divider">
+                <a href="#" id="clear-project-btn"><i class="fas fa-eraser"></i> Clear Project</a>
+                <a href="#" id="info-btn"><i class="fas fa-info-circle"></i> Info</a>
+                <a href="#" id="about-btn"><i class="fas fa-user-friends"></i> About</a>
             </div>
-            <h2>Shooting Schedule</h2>
+        </div>
+        <div class="header-center">
+            <h2 id="app-title">ToshooT</h2>
+        </div>
+        <div class="header-right">
+            <button id="sequence-hamburger-btn" class="icon-btn"><i class="fas fa-layer-group"></i></button>
         </div>
     </header>
     
     <div class="container">
+        </div>
+
+    <div id="sequence-panel" class="side-panel">
+        <div class="panel-header">
+            <h3>Sequences</h3>
+            <div class="panel-actions">
+                <select id="sort-by-select" class="panel-sort">
+                    <option value="default">Sort by...</option>
+                    <option value="location">Location</option>
+                    <option value="date">Date</option>
+                    <option value="status">Status</option>
+                </select>
+                <button id="close-panel-btn" class="icon-btn">&times;</button>
+            </div>
+        </div>
+        <div id="sequence-list" class="panel-list">
+            </div>
+    </div>
+
+    <div id="info-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="close-info-modal">&times;</span>
+            <h3>Field & Button Guide</h3>
+            <div class="info-content">
+                <p><strong>Scene #</strong>: The number of your scene (e.g., 1, 2A).</p>
+                <p><strong>Scene Heading</strong>: The description from your script (e.g., INT. CAFE - DAY).</p>
+                <p><strong>Status</strong>: Mark scenes as <strong>Pending</strong>, <strong>NOT SHOT</strong>, or <strong>Done</strong>.</p>
+                <p><strong>Contact Person</strong>: The primary contact for the scene. This name is remembered for the next scene you add.</p>
+                <p><strong>Edit Button (✎)</strong>: Click to open a pop-up and edit all details for that scene.</p>
+                <p><strong>Share Button (Share)</strong>: Generates a vertical image card of the scene's details, perfect for sharing on mobile.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div id="about-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="close-about-modal">&times;</span>
+            <h3>About ToshooT</h3>
+            <p class="about-text">Designed By Thosho Tech</p>
+        </div>
+    </div>
+    
+    <div class="container">
         <input type="file" id="file-input" accept=".filmproj,.json" style="display: none;">
-
         <div class="section" id="scheduling">
-            <div class="scene-strips-container" id="scene-strips-container">
-                </div>
-
+            <div class="scene-strips-container" id="scene-strips-container"></div>
             <form id="schedule-form" class="new-scene-form">
                 <h3>Add New Scene</h3>
                 <div class="form-grid">
-                    <input type="text" id="scene-number" placeholder="Scene #" required>
-                    <input type="text" id="scene-heading" placeholder="Scene Heading" required>
+                    <input type="text" id="scene-number" placeholder="Scene #" required><input type="text" id="scene-heading" placeholder="Scene Heading" required>
                     <div class="input-wrapper"><input type="date" id="scene-date" class="has-label" required><label for="scene-date">Date</label></div>
                     <div class="input-wrapper"><input type="time" id="scene-time" class="has-label" required><label for="scene-time">Time</label></div>
                     <select id="scene-type"><option value="INT">INT.</option><option value="EXT">EXT.</option><option value="INT/EXT">INT./EXT.</option></select>
-                    <input type="text" id="scene-location" placeholder="Location" required>
-                    <input type="text" id="scene-pages" placeholder="Pages (e.g., 1 3/8)">
+                    <input type="text" id="scene-location" placeholder="Location" required><input type="text" id="scene-pages" placeholder="Pages (e.g., 1 3/8)">
                     <input type="text" id="scene-duration" placeholder="Duration (e.g., 2h 30m)">
-                    <select id="scene-status"><option value="Pending">Pending</option><option value="Incomplete">Incomplete</option><option value="Done">Done</option></select>
-                    <input type="text" id="scene-cast" placeholder="Cast (e.g., John, Mary)">
-                    <input type="text" id="scene-equipment" placeholder="Key Equipment">
+                    <select id="scene-status"><option value="Pending">Pending</option><option value="NOT SHOT">NOT SHOT</option><option value="Done">Done</option></select>
+                    <input type="text" id="scene-cast" placeholder="Cast (e.g., John, Mary)"><input type="text" id="scene-equipment" placeholder="Key Equipment">
                     <input type="tel" id="scene-contact" placeholder="Contact Person (e.g., AD)">
                 </div>
                 <button type="submit" class="btn-primary">Add Scene</button>
             </form>
         </div>
     </div>
-
     <div id="share-card-template"></div>
-
-    <div id="project-info-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn" id="close-project-modal">&times;</span>
-            <h3>Project Information</h3>
-            <div class="modal-form">
-                <input type="text" id="prod-name" placeholder="Production / Studio Name">
-                <input type="text" id="director-name" placeholder="Director Name">
-                <input type="tel" id="contact-number" placeholder="Contact Number">
-                <input type="email" id="contact-email" placeholder="Email">
-                <button id="save-project-info-btn" class="btn-primary">Save Info</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="edit-scene-modal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn" id="close-edit-modal">&times;</span>
-            <h3>Edit Scene</h3>
-            <input type="hidden" id="edit-scene-id">
-            <div class="form-grid">
-                <input type="text" id="edit-scene-number" placeholder="Scene #"><input type="text" id="edit-scene-heading" placeholder="Scene Heading">
-                <input type="date" id="edit-scene-date"><input type="time" id="edit-scene-time">
-                <select id="edit-scene-type"><option value="INT">INT.</option><option value="EXT">EXT.</option><option value="INT/EXT">INT./EXT.</option></select>
-                <input type="text" id="edit-scene-location" placeholder="Location"><input type="text" id="edit-scene-pages" placeholder="Pages">
-                <input type="text" id="edit-scene-duration" placeholder="Duration">
-                <select id="edit-scene-status"><option value="Pending">Pending</option><option value="Incomplete">Incomplete</option><option value="Done">Done</option></select>
-                <input type="text" id="edit-scene-cast" placeholder="Cast"><input type="text" id="edit-scene-equipment" placeholder="Key Equipment">
-                <input type="tel" id="edit-scene-contact" placeholder="Contact Person">
-            </div>
-            <div class="modal-actions">
-                <button id="delete-scene-btn" class="btn-danger">Delete Scene</button>
-                <button id="save-changes-btn" class="btn-primary">Save Changes</button>
-            </div>
-        </div>
-    </div>
-
-    <script src="script.js"></script>
+    <div id="project-info-modal" class="modal"></div>
+    <div id="edit-scene-modal" class="modal"></div>
+    <script src="schedule.script.js"></script>
 </body>
 </html>
