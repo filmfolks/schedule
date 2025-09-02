@@ -100,7 +100,7 @@ function sortActiveSequence(sortBy) {
         if (a[sortBy] > b[sortBy]) return 1;
         return 0;
     });
-    renderSchedule(); // Re-render the UI with the sorted list
+    renderSchedule();
 }
 
 // =================================================================
@@ -109,9 +109,8 @@ function sortActiveSequence(sortBy) {
 function handleAddScene(e) {
     e.preventDefault();
     if (projectData.activeSequenceIndex === -1) {
-        if (confirm("No sequence selected. Would you like to create 'Sequence 1' to add this scene?")) {
+        if (confirm("No sequence created. Would you like to create 'Sequence 1' to add this scene?")) {
             handleNewSequence();
-            // If user cancels the prompt for a name, exit
             if (projectData.activeSequenceIndex === -1) return;
         } else {
             return;
@@ -194,6 +193,7 @@ function deleteScene(id) {
 // --- DATA PERSISTENCE & PROJECT FILES ---
 // =================================================================
 function saveProjectData() { localStorage.setItem('projectData', JSON.stringify(projectData)); }
+
 function loadProjectData() {
     const savedData = localStorage.getItem('projectData');
     projectData = savedData ? JSON.parse(savedData) : { sequences: [], activeSequenceIndex: -1, projectInfo: {} };
@@ -201,13 +201,14 @@ function loadProjectData() {
     if (projectData.activeSequenceIndex === -1 && projectData.sequences.length > 0) {
         projectData.activeSequenceIndex = 0;
     }
-    if (projectData.activeSequenceIndex > -1) {
+    if (projectData.activeSequenceIndex > -1 && projectData.sequences.length > 0) {
         const activeScenes = projectData.sequences[projectData.activeSequenceIndex].scenes;
         if (activeScenes.length > 0) { lastContactPerson = activeScenes[activeScenes.length - 1].contact || ''; }
     }
     renderSchedule();
     renderSequencePanel();
 }
+
 function clearProject() {
     if (confirm('Are you sure you want to clear the entire project? This will delete all sequences and scenes.')) {
         projectData = { sequences: [], activeSequenceIndex: -1, projectInfo: {} };
@@ -218,6 +219,7 @@ function clearProject() {
         alert('Project cleared.');
     }
 }
+
 function saveProjectFile() {
     const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -227,6 +229,7 @@ function saveProjectFile() {
     a.click();
     URL.revokeObjectURL(url);
 }
+
 function openProjectFile(event) {
     const file = event.target.files[0]; if (!file) return;
     const reader = new FileReader();
@@ -265,15 +268,127 @@ function handleSaveProjectInfo() {
     saveProjectData();
     closeProjectModal();
 }
-function openEditModal(id) { /* ... */ }
-function closeEditModal() { /* ... */ }
-function handleSaveChanges() { /* ... */ }
-function handleDeleteFromModal() { /* ... */ }
+function openEditModal(id) {
+    if (projectData.activeSequenceIndex < 0) return;
+    const scene = projectData.sequences[projectData.activeSequenceIndex].scenes.find(s => s.id === id);
+    if (!scene) return;
+    document.getElementById('edit-scene-id').value = scene.id;
+    document.getElementById('edit-scene-number').value = scene.number;
+    document.getElementById('edit-scene-heading').value = scene.heading;
+    document.getElementById('edit-scene-date').value = scene.date;
+    document.getElementById('edit-scene-time').value = scene.time;
+    document.getElementById('edit-scene-type').value = scene.type;
+    document.getElementById('edit-scene-location').value = scene.location;
+    document.getElementById('edit-scene-pages').value = scene.pages;
+    document.getElementById('edit-scene-duration').value = scene.duration;
+    document.getElementById('edit-scene-status').value = scene.status;
+    document.getElementById('edit-scene-cast').value = scene.cast;
+    document.getElementById('edit-scene-equipment').value = scene.equipment;
+    document.getElementById('edit-scene-contact').value = scene.contact;
+    document.getElementById('edit-scene-modal').style.display = 'block';
+}
+function closeEditModal() { document.getElementById('edit-scene-modal').style.display = 'none'; }
+function handleSaveChanges() {
+    const sceneId = parseInt(document.getElementById('edit-scene-id').value);
+    const sceneIndex = projectData.sequences[projectData.activeSequenceIndex].scenes.findIndex(s => s.id === sceneId);
+    if (sceneIndex === -1) return;
+    projectData.sequences[projectData.activeSequenceIndex].scenes[sceneIndex] = {
+        id: sceneId,
+        number: document.getElementById('edit-scene-number').value,
+        heading: document.getElementById('edit-scene-heading').value,
+        date: document.getElementById('edit-scene-date').value,
+        time: document.getElementById('edit-scene-time').value,
+        type: document.getElementById('edit-scene-type').value,
+        location: document.getElementById('edit-scene-location').value,
+        pages: document.getElementById('edit-scene-pages').value,
+        duration: document.getElementById('edit-scene-duration').value,
+        status: document.getElementById('edit-scene-status').value,
+        cast: document.getElementById('edit-scene-cast').value,
+        equipment: document.getElementById('edit-scene-equipment').value,
+        contact: document.getElementById('edit-scene-contact').value
+    };
+    saveProjectData();
+    renderSchedule();
+    closeEditModal();
+}
+function handleDeleteFromModal() {
+    const sceneId = parseInt(document.getElementById('edit-scene-id').value);
+    deleteScene(sceneId);
+    closeEditModal();
+}
 
 // =================================================================
 // --- EXPORT & SHARE FUNCTIONS ---
 // =================================================================
-function saveAsExcel() { /* ... */ }
-async function shareProject() { /* ... */ }
-async function shareScene(id) { /* ... */ }
-function formatTime12Hour(timeString) { /* ... */ }
+function saveAsExcel() {
+    if (projectData.activeSequenceIndex < 0) { alert("Please select a sequence to export."); return; }
+    const activeScenes = projectData.sequences[projectData.activeSequenceIndex].scenes;
+    const sequenceName = projectData.sequences[projectData.activeSequenceIndex].name;
+    if (activeScenes.length === 0) { alert(`Sequence "${sequenceName}" has no scenes to export.`); return; }
+    const worksheet = XLSX.utils.json_to_sheet(activeScenes);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, sequenceName);
+    XLSX.writeFile(workbook, `${sequenceName}_Schedule.xlsx`);
+}
+
+async function shareProject() {
+    const projectInfo = projectData.projectInfo || {};
+    const baseName = projectInfo.prodName || 'Schedule';
+
+    const jsonBlob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
+    const jsonFile = new File([jsonBlob], `${baseName}.filmproj`, { type: 'application/json' });
+    
+    if (navigator.canShare && navigator.canShare({ files: [jsonFile] })) {
+        try {
+            await navigator.share({
+                title: `${baseName} Project`,
+                text: `Here is the project file for ${baseName}.`,
+                files: [jsonFile]
+            });
+        } catch (error) { console.error("Sharing failed:", error); }
+    } else { alert("Web Share is not supported on this browser. This feature is best on mobile."); }
+}
+
+async function shareScene(id) {
+    if (projectData.activeSequenceIndex < 0) return;
+    const template = document.getElementById('share-card-template');
+    const scene = projectData.sequences[projectData.activeSequenceIndex].scenes.find(s => s.id === id); 
+    const projectInfo = projectData.projectInfo || {};
+    if (!template || !scene) return;
+    
+    let footerHtml = `<div class="footer-project-info">
+            ${projectInfo.prodName ? `<div>${projectInfo.prodName}</div>` : ''}
+            ${projectInfo.directorName ? `<div>Dir: ${projectInfo.directorName}</div>` : ''}
+        </div><div class="footer-brand">@Thosho Tech</div>`;
+
+    template.innerHTML = `<div class="share-card-content">
+            <div class="share-card-header"><h1>Scene #${scene.number}</h1><h2>${scene.heading}</h2></div>
+            <p class="share-card-item"><strong>Date:</strong> ${scene.date}</p>
+            <p class="share-card-item"><strong>Time:</strong> ${formatTime12Hour(scene.time)}</p>
+            <p class="share-card-item"><strong>Location:</strong> ${scene.type}. ${scene.location}</p>
+            <p class="share-card-item"><strong>Cast:</strong> ${scene.cast || 'N/A'}</p>
+            <p class="share-card-item"><strong>Contact:</strong> 📞 ${scene.contact || 'N/A'}</p>
+            <div class="share-card-footer">${footerHtml}</div></div>`;
+
+    try {
+        const canvas = await html2canvas(template, { scale: 2 });
+        const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+        const file = new File([blob], `scene_${scene.number}.png`, { type: 'image/png' });
+        
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+            await navigator.share({ files: [file], title: `Shooting Schedule - Scene ${scene.number}` });
+        } else {
+            const imgUrl = URL.createObjectURL(blob);
+            window.open(imgUrl, '_blank');
+        }
+    } catch (error) { console.error('Sharing failed:', error); }
+}
+
+function formatTime12Hour(timeString) {
+    if (!timeString) return "N/A";
+    const [hour, minute] = timeString.split(':');
+    const hourInt = parseInt(hour, 10);
+    const ampm = hourInt >= 12 ? 'PM' : 'AM';
+    const hour12 = hourInt % 12 || 12;
+    return `${hour12}:${minute} ${ampm}`;
+}
