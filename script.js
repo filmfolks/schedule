@@ -203,7 +203,9 @@ function loadProjectData() {
     }
     if (projectData.activeSequenceIndex > -1 && projectData.sequences.length > 0) {
         const activeScenes = projectData.sequences[projectData.activeSequenceIndex].scenes;
-        if (activeScenes.length > 0) { lastContactPerson = activeScenes[activeScenes.length - 1].contact || ''; }
+        if (activeScenes && activeScenes.length > 0) {
+            lastContactPerson = activeScenes[activeScenes.length - 1].contact || '';
+        }
     }
     renderSchedule();
     renderSequencePanel();
@@ -259,7 +261,9 @@ function openProjectModal() {
     document.getElementById('contact-email').value = projectInfo.contactEmail || '';
     document.getElementById('project-info-modal').style.display = 'block';
 }
+
 function closeProjectModal() { document.getElementById('project-info-modal').style.display = 'none'; }
+
 function handleSaveProjectInfo() {
     projectData.projectInfo = {
         prodName: document.getElementById('prod-name').value, directorName: document.getElementById('director-name').value,
@@ -268,6 +272,7 @@ function handleSaveProjectInfo() {
     saveProjectData();
     closeProjectModal();
 }
+
 function openEditModal(id) {
     if (projectData.activeSequenceIndex < 0) return;
     const scene = projectData.sequences[projectData.activeSequenceIndex].scenes.find(s => s.id === id);
@@ -287,7 +292,9 @@ function openEditModal(id) {
     document.getElementById('edit-scene-contact').value = scene.contact;
     document.getElementById('edit-scene-modal').style.display = 'block';
 }
+
 function closeEditModal() { document.getElementById('edit-scene-modal').style.display = 'none'; }
+
 function handleSaveChanges() {
     const sceneId = parseInt(document.getElementById('edit-scene-id').value);
     const sceneIndex = projectData.sequences[projectData.activeSequenceIndex].scenes.findIndex(s => s.id === sceneId);
@@ -311,6 +318,7 @@ function handleSaveChanges() {
     renderSchedule();
     closeEditModal();
 }
+
 function handleDeleteFromModal() {
     const sceneId = parseInt(document.getElementById('edit-scene-id').value);
     deleteScene(sceneId);
