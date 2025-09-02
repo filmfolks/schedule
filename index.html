@@ -14,7 +14,7 @@
         <div class="header-left">
             <button id="hamburger-btn" class="icon-btn"><i class="fas fa-bars"></i></button>
             <div id="dropdown-menu" class="dropdown-content">
-                <a href="#" id="new-project-btn"><i class="fas fa-plus-circle"></i> New Project</a>
+                <a href="#" id="new-project-btn"><i class="fas fa-plus-circle"></i> Project Info</a>
                 <a href="#" id="save-excel-btn"><i class="fas fa-file-excel"></i> Save as Excel</a>
                 <a href="#" id="save-pdf-btn"><i class="fas fa-file-pdf"></i> Save as PDF</a>
             </div>
@@ -32,7 +32,6 @@
                 <div class="form-grid">
                     <input type="text" id="scene-number" placeholder="Scene #" required>
                     <input type="text" id="scene-heading" placeholder="Scene Heading" required>
-                    
                     <div class="input-wrapper">
                         <input type="date" id="scene-date" class="has-label" required>
                         <label for="scene-date">Date</label>
@@ -41,7 +40,6 @@
                         <input type="time" id="scene-time" class="has-label" required>
                         <label for="scene-time">Time</label>
                     </div>
-                    
                     <select id="scene-type">
                         <option value="INT">INT.</option>
                         <option value="EXT">EXT.</option>
@@ -49,14 +47,12 @@
                     </select>
                     <input type="text" id="scene-location" placeholder="Location" required>
                     <input type="text" id="scene-pages" placeholder="Pages (e.g., 1 3/8)">
-                    
                     <input type="text" id="scene-duration" placeholder="Duration (e.g., 2h 30m)">
-                     <select id="scene-status">
+                    <select id="scene-status">
                         <option value="Pending">Pending</option>
                         <option value="Incomplete">Incomplete</option>
                         <option value="Done">Done</option>
                     </select>
-
                     <input type="text" id="scene-cast" placeholder="Cast (e.g., John, Mary)">
                     <input type="text" id="scene-equipment" placeholder="Key Equipment">
                     <input type="tel" id="scene-contact" placeholder="Contact Person (e.g., AD)">
@@ -70,7 +66,7 @@
 
     <div id="project-info-modal" class="modal">
         <div class="modal-content">
-            <span class="close-btn">&times;</span>
+            <span class="close-btn" id="close-project-modal">&times;</span>
             <h3>Project Information</h3>
             <div class="modal-form">
                 <input type="text" id="prod-name" placeholder="Production / Studio Name">
@@ -78,6 +74,40 @@
                 <input type="tel" id="contact-number" placeholder="Contact Number">
                 <input type="email" id="contact-email" placeholder="Email">
                 <button id="save-project-info-btn" class="btn-primary">Save Info</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="edit-scene-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" id="close-edit-modal">&times;</span>
+            <h3>Edit Scene</h3>
+            <input type="hidden" id="edit-scene-id">
+            <div class="form-grid">
+                <input type="text" id="edit-scene-number" placeholder="Scene #">
+                <input type="text" id="edit-scene-heading" placeholder="Scene Heading">
+                <input type="date" id="edit-scene-date">
+                <input type="time" id="edit-scene-time">
+                <select id="edit-scene-type">
+                    <option value="INT">INT.</option>
+                    <option value="EXT">EXT.</option>
+                    <option value="INT/EXT">INT./EXT.</option>
+                </select>
+                <input type="text" id="edit-scene-location" placeholder="Location">
+                <input type="text" id="edit-scene-pages" placeholder="Pages">
+                <input type="text" id="edit-scene-duration" placeholder="Duration">
+                <select id="edit-scene-status">
+                    <option value="Pending">Pending</option>
+                    <option value="Incomplete">Incomplete</option>
+                    <option value="Done">Done</option>
+                </select>
+                <input type="text" id="edit-scene-cast" placeholder="Cast">
+                <input type="text" id="edit-scene-equipment" placeholder="Key Equipment">
+                <input type="tel" id="edit-scene-contact" placeholder="Contact Person">
+            </div>
+            <div class="modal-actions">
+                <button id="delete-scene-btn" class="btn-danger">Delete Scene</button>
+                <button id="save-changes-btn" class="btn-primary">Save Changes</button>
             </div>
         </div>
     </div>
