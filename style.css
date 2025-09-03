@@ -110,7 +110,7 @@ button { padding: 10px 20px; border-radius: 6px; font-size: 1rem; font-weight: 6
 .share-btn-strip { background: none; border: none; color: #25D366; font-size: 1.5rem; cursor: pointer; padding: 0; line-height: 1; }
 .edit-btn-strip { background: none; border: none; color: var(--primary-color); font-size: 1.2rem; cursor: pointer; padding: 0; line-height: 1; }
 
-/* --- Side Panel for Sequences (Updated) --- */
+/* --- Side Panel for Sequences --- */
 .side-panel {
     position: fixed; top: 0; right: -320px; width: 300px; height: 100%;
     background-color: var(--surface-color); box-shadow: -5px 0 15px rgba(0,0,0,0.5);
@@ -118,33 +118,24 @@ button { padding: 10px 20px; border-radius: 6px; font-size: 1rem; font-weight: 6
 }
 .side-panel.open { right: 0; }
 .panel-header {
-    display: flex;
-    flex-direction: column; /* Stack title and actions vertically */
-    align-items: flex-start; /* Align to the left */
-    gap: 12px; /* Space between title and buttons */
-    padding: 15px;
-    border-bottom: 1px solid var(--border-color);
+    display: flex; flex-direction: column; align-items: flex-start; gap: 12px;
+    padding: 15px; border-bottom: 1px solid var(--border-color);
 }
 .panel-header h3 { margin: 0; }
-.panel-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px; /* Reduced space between buttons */
-    width: 100%;
-}
-.panel-sort { flex-grow: 1; /* Let the sort dropdown take up available space */ }
+.panel-actions { display: flex; align-items: center; gap: 8px; width: 100%; }
+.panel-sort { flex-grow: 1; background-color: var(--background-color); border: 1px solid var(--border-color); color: var(--text-color); border-radius: 4px; padding: 4px 6px; font-size: 0.8rem; }
 .panel-list { overflow-y: auto; padding: 10px; }
 .sequence-item, .schedule-break-item {
     display: block; width: 100%; padding: 12px 15px; background: none; border: none;
     color: var(--text-color); text-align: left; border-radius: 6px; font-size: 1rem;
 }
-.sequence-item { cursor: grab; }
+.sequence-item, .schedule-break-item { cursor: grab; }
 .sequence-item:hover { background-color: var(--background-color); }
 .sequence-item.active { background-color: var(--primary-color); font-weight: bold; }
 .schedule-break-item {
     background-color: var(--background-color); font-weight: bold;
     text-transform: uppercase; font-size: 0.8rem; color: #9ca3af;
-    margin-top: 10px; cursor: grab;
+    margin-top: 10px;
 }
 .sortable-ghost { opacity: 0.4; background: var(--primary-color); }
 
