@@ -2,18 +2,23 @@
 // --- GLOBAL STATE & DATA STRUCTURE ---
 // =================================================================
 let projectData = {
-    sequences: [],
-    activeSequenceIndex: -1,
+    panelItems: [], // Holds both sequences and schedule breaks
+    activeItemId: null,
     projectInfo: {}
 };
 let lastContactPerson = '';
 
+// =================================================================
+// --- INITIALIZATION ---
+// =================================================================
 document.addEventListener('DOMContentLoaded', () => {
+    console.log("ToshooT Script Initializing...");
     setupEventListeners();
     loadProjectData();
     initializeDragAndDrop();
     const contactInput = document.getElementById('scene-contact');
     if (contactInput) contactInput.value = lastContactPerson;
+    console.log("Initialization Complete.");
 });
 
 // =================================================================
@@ -68,15 +73,17 @@ function setupEventListeners() {
 // =================================================================
 function initializeDragAndDrop() {
     const listContainer = document.getElementById('sequence-list');
-    new Sortable(listContainer, {
-        animation: 150,
-        ghostClass: 'sortable-ghost',
-        onEnd: (evt) => {
-            const item = projectData.panelItems.splice(evt.oldIndex, 1)[0];
-            projectData.panelItems.splice(evt.newIndex, 0, item);
-            saveProjectData();
-        }
-    });
+    if(listContainer){
+        new Sortable(listContainer, {
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onEnd: (evt) => {
+                const item = projectData.panelItems.splice(evt.oldIndex, 1)[0];
+                projectData.panelItems.splice(evt.newIndex, 0, item);
+                saveProjectData();
+            }
+        });
+    }
 }
 
 // =================================================================
@@ -86,12 +93,9 @@ function handleNewSequence() {
     let name = prompt("Enter a name for the new sequence:");
     if (name === null) return;
     if (name.trim() === "") name = `Sequence ${projectData.panelItems.filter(i => i.type === 'sequence').length + 1}`;
-    
     const newItem = { type: 'sequence', id: Date.now(), name: name, scenes: [] };
     projectData.panelItems.push(newItem);
     setActiveItem(newItem.id);
-    saveProjectData();
-    renderSequencePanel();
 }
 
 function handleAddScheduleBreak() {
@@ -116,6 +120,7 @@ function setActiveItem(id) {
 
 function renderSequencePanel() {
     const listContainer = document.getElementById('sequence-list');
+    if (!listContainer) return;
     listContainer.innerHTML = '';
     projectData.panelItems.forEach(item => {
         const element = document.createElement('div');
@@ -131,34 +136,35 @@ function renderSequencePanel() {
     });
 }
 
-// =================================================================
-// --- SORTING FUNCTION (FIXED) ---
-// =================================================================
 function sortActiveSequence(sortBy) {
     const activeSequence = projectData.panelItems.find(item => item.id === projectData.activeItemId);
     if (!activeSequence || sortBy === 'default') return;
-
-    // The sort() method modifies the array in place
     activeSequence.scenes.sort((a, b) => {
-        const valA = a[sortBy].toUpperCase(); // Make sort case-insensitive
-        const valB = b[sortBy].toUpperCase();
+        const valA = (a[sortBy] || '').toUpperCase();
+        const valB = (b[sortBy] || '').toUpperCase();
         if (valA < valB) return -1;
         if (valA > valB) return 1;
         return 0;
     });
-    
+    saveProjectData();
+    renderSchedule();
+}
+
 // =================================================================
 // --- CORE SCHEDULE FUNCTIONS ---
 // =================================================================
 function handleAddScene(e) {
     e.preventDefault();
-    const activeSequence = projectData.panelItems.find(item => item.id === projectData.activeItemId);
+    let activeSequence = projectData.panelItems.find(item => item.id === projectData.activeItemId);
     if (!activeSequence || activeSequence.type !== 'sequence') {
-        if (confirm("No sequence selected. Would you like to create 'Sequence 1' to add this scene?")) {
+        if (confirm("No sequence created. Would you like to create 'Sequence 1' to add this scene?")) {
             handleNewSequence();
-            setTimeout(() => document.getElementById('schedule-form').requestSubmit(), 100);
+            // We need to re-find the active sequence after it's created
+            activeSequence = projectData.panelItems.find(item => item.id === projectData.activeItemId);
+            if(!activeSequence) return; // Exit if user cancelled the new sequence prompt
+        } else {
+            return;
         }
-        return;
     }
     const newScene = {
         id: Date.now(), number: document.getElementById('scene-number').value,
@@ -181,14 +187,11 @@ function renderSchedule() {
     const container = document.getElementById('scene-strips-container');
     const display = document.getElementById('active-sequence-display');
     container.innerHTML = '';
-    
     const activeSequence = projectData.panelItems.find(item => item.id === projectData.activeItemId);
-    
     if (!activeSequence || activeSequence.type !== 'sequence') {
         display.textContent = 'No active sequence. Create or select a sequence.';
         return;
     }
-
     display.textContent = `Current Sequence: ${activeSequence.name}`;
     activeSequence.scenes.forEach(scene => {
         const stripWrapper = document.createElement('div');
@@ -196,10 +199,8 @@ function renderSchedule() {
         const statusClass = scene.status.replace(/\s+/g, '-').toLowerCase();
         stripWrapper.innerHTML = `
             <div class="scene-strip" id="scene-strip-${scene.id}">
-                <div class="strip-item"><strong>#${scene.number}</strong></div>
-                <div class="strip-item">${scene.heading}</div>
-                <div class="strip-item">${scene.date}</div>
-                <div class="strip-item">${scene.time}</div>
+                <div class="strip-item"><strong>#${scene.number}</strong></div><div class="strip-item">${scene.heading}</div>
+                <div class="strip-item">${scene.date}</div><div class="strip-item">${scene.time}</div>
                 <div class="strip-item">${scene.type}. ${scene.location}</div>
                 <div class="strip-item">Pages: <strong>${scene.pages || 'N/A'}</strong></div>
                 <div class="strip-item">Duration: <strong>${scene.duration || 'N/A'}</strong></div>
@@ -314,7 +315,6 @@ function openEditModal(id) {
     if (!activeSequence) return;
     const scene = activeSequence.scenes.find(s => s.id === id);
     if (!scene) return;
-
     document.getElementById('edit-scene-id').value = scene.id;
     document.getElementById('edit-scene-number').value = scene.number;
     document.getElementById('edit-scene-heading').value = scene.heading;
@@ -339,7 +339,6 @@ function handleSaveChanges() {
     if (!activeSequence) return;
     const sceneIndex = activeSequence.scenes.findIndex(s => s.id === sceneId);
     if (sceneIndex === -1) return;
-
     activeSequence.scenes[sceneIndex] = {
         id: sceneId,
         number: document.getElementById('edit-scene-number').value,
@@ -367,25 +366,15 @@ function handleDeleteFromModal() {
 }
 
 // =================================================================
-// --- EXPORT & SHARE FUNCTIONS (UPDATED EXCEL EXPORT) ---
+// --- EXPORT & SHARE FUNCTIONS ---
 // =================================================================
 function saveAsExcel() {
     const activeSequence = projectData.panelItems.find(item => item.id === projectData.activeItemId);
-    if (!activeSequence || activeSequence.type !== 'sequence') {
-        alert("Please select a sequence to export.");
-        return;
-    }
-
+    if (!activeSequence || activeSequence.type !== 'sequence') { alert("Please select a sequence to export."); return; }
     const projectInfo = projectData.projectInfo || {};
     const sequenceName = activeSequence.name;
     const activeScenes = activeSequence.scenes;
-
-    if (activeScenes.length === 0) {
-        alert(`Sequence "${sequenceName}" has no scenes to export.`);
-        return;
-    }
-
-    // Find the schedule break for this sequence
+    if (activeScenes.length === 0) { alert(`Sequence "${sequenceName}" has no scenes to export.`); return; }
     let scheduleBreakName = 'Uncategorized';
     const sequenceIndex = projectData.panelItems.findIndex(item => item.id === projectData.activeItemId);
     for (let i = sequenceIndex - 1; i >= 0; i--) {
@@ -394,29 +383,19 @@ function saveAsExcel() {
             break;
         }
     }
-
-    // 1. Create the custom header rows
     const header = [
-        ["Production:", projectInfo.prodName || '', "Director:", projectInfo.directorName || ''],
-        ["Contact:", projectInfo.contactNumber || '', "Email:", projectInfo.contactEmail || ''],
-        [], // Empty spacer row
+        ["Production:", projectInfo.prodName || 'N/A', "Director:", projectInfo.directorName || 'N/A'],
+        ["Contact:", projectInfo.contactNumber || 'N/A', "Email:", projectInfo.contactEmail || 'N/A'],
+        [],
         [`Schedule Break: ${scheduleBreakName}`],
         [`Sequence: ${sequenceName}`],
-        [] // Empty spacer row
+        []
     ];
-
-    // 2. Create a worksheet from the header array
     const worksheet = XLSX.utils.aoa_to_sheet(header);
-
-    // 3. Add the main scene data, starting after the header
-    XLSX.utils.sheet_add_json(worksheet, activeScenes, {
-        origin: `A${header.length + 1}`, // Start data on the next row
-        skipHeader: false
-    });
-
-    // 4. Create a workbook and download
+    worksheet['!merges'] = [{ s: { r: 0, c: 1 }, e: { r: 0, c: 2 } }, { s: { r: 1, c: 1 }, e: { r: 1, c: 2 } }];
+    XLSX.utils.sheet_add_json(worksheet, activeScenes, { origin: `A${header.length + 1}`, skipHeader: false });
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, sequenceName.replace(/[/\\?*:[\]]/g, '')); // Sanitize sheet name
+    XLSX.utils.book_append_sheet(workbook, worksheet, sequenceName.replace(/[/\\?*:[\]]/g, ''));
     XLSX.writeFile(workbook, `${sequenceName}_Schedule.xlsx`);
 }
 
@@ -425,7 +404,6 @@ async function shareProject() {
     const baseName = projectInfo.prodName || 'Schedule';
     const jsonBlob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
     const jsonFile = new File([jsonBlob], `${baseName}.filmproj`, { type: 'application/json' });
-    
     if (navigator.canShare && navigator.canShare({ files: [jsonFile] })) {
         try {
             await navigator.share({
@@ -444,12 +422,11 @@ async function shareScene(id) {
     const scene = activeSequence.scenes.find(s => s.id === id); 
     const projectInfo = projectData.projectInfo || {};
     if (!template || !scene) return;
-    
     let footerHtml = `<div class="footer-project-info">
             ${projectInfo.prodName ? `<div>${projectInfo.prodName}</div>` : ''}
             ${projectInfo.directorName ? `<div>Dir: ${projectInfo.directorName}</div>` : ''}
+            ${projectInfo.contactEmail ? `<div>${projectInfo.contactEmail}</div>` : ''}
         </div><div class="footer-brand">@Thosho Tech</div>`;
-
     template.innerHTML = `<div class="share-card-content">
             <div class="share-card-header"><h1>Scene #${scene.number}</h1><h2>${scene.heading}</h2></div>
             <p class="share-card-item"><strong>Date:</strong> ${scene.date}</p>
@@ -458,12 +435,10 @@ async function shareScene(id) {
             <p class="share-card-item"><strong>Cast:</strong> ${scene.cast || 'N/A'}</p>
             <p class="share-card-item"><strong>Contact:</strong> 📞 ${scene.contact || 'N/A'}</p>
             <div class="share-card-footer">${footerHtml}</div></div>`;
-
     try {
         const canvas = await html2canvas(template, { scale: 2 });
         const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
         const file = new File([blob], `scene_${scene.number}.png`, { type: 'image/png' });
-        
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
             await navigator.share({ files: [file], title: `Shooting Schedule - Scene ${scene.number}` });
         } else {
