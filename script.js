@@ -131,13 +131,22 @@ function renderSequencePanel() {
     });
 }
 
+// =================================================================
+// --- SORTING FUNCTION (FIXED) ---
+// =================================================================
 function sortActiveSequence(sortBy) {
     const activeSequence = projectData.panelItems.find(item => item.id === projectData.activeItemId);
     if (!activeSequence || sortBy === 'default') return;
-    activeSequence.scenes.sort((a, b) => (a[sortBy] < b[sortBy]) ? -1 : (a[sortBy] > b[sortBy]) ? 1 : 0);
-    renderSchedule();
-}
 
+    // The sort() method modifies the array in place
+    activeSequence.scenes.sort((a, b) => {
+        const valA = a[sortBy].toUpperCase(); // Make sort case-insensitive
+        const valB = b[sortBy].toUpperCase();
+        if (valA < valB) return -1;
+        if (valA > valB) return 1;
+        return 0;
+    });
+    
 // =================================================================
 // --- CORE SCHEDULE FUNCTIONS ---
 // =================================================================
@@ -172,11 +181,14 @@ function renderSchedule() {
     const container = document.getElementById('scene-strips-container');
     const display = document.getElementById('active-sequence-display');
     container.innerHTML = '';
+    
     const activeSequence = projectData.panelItems.find(item => item.id === projectData.activeItemId);
+    
     if (!activeSequence || activeSequence.type !== 'sequence') {
         display.textContent = 'No active sequence. Create or select a sequence.';
         return;
     }
+
     display.textContent = `Current Sequence: ${activeSequence.name}`;
     activeSequence.scenes.forEach(scene => {
         const stripWrapper = document.createElement('div');
@@ -355,23 +367,57 @@ function handleDeleteFromModal() {
 }
 
 // =================================================================
-// --- EXPORT & SHARE FUNCTIONS ---
+// --- EXPORT & SHARE FUNCTIONS (UPDATED EXCEL EXPORT) ---
 // =================================================================
 function saveAsExcel() {
     const activeSequence = projectData.panelItems.find(item => item.id === projectData.activeItemId);
-    if (!activeSequence || activeSequence.type !== 'sequence') { alert("Please select a sequence to export."); return; }
+    if (!activeSequence || activeSequence.type !== 'sequence') {
+        alert("Please select a sequence to export.");
+        return;
+    }
+
     const projectInfo = projectData.projectInfo || {};
+    const sequenceName = activeSequence.name;
+    const activeScenes = activeSequence.scenes;
+
+    if (activeScenes.length === 0) {
+        alert(`Sequence "${sequenceName}" has no scenes to export.`);
+        return;
+    }
+
+    // Find the schedule break for this sequence
+    let scheduleBreakName = 'Uncategorized';
+    const sequenceIndex = projectData.panelItems.findIndex(item => item.id === projectData.activeItemId);
+    for (let i = sequenceIndex - 1; i >= 0; i--) {
+        if (projectData.panelItems[i].type === 'schedule_break') {
+            scheduleBreakName = projectData.panelItems[i].name;
+            break;
+        }
+    }
+
+    // 1. Create the custom header rows
     const header = [
-        ["Production:", projectInfo.prodName || 'N/A', "Director:", projectInfo.directorName || 'N/A'],
-        ["Contact:", projectInfo.contactNumber || 'N/A', "Email:", projectInfo.contactEmail || 'N/A'],
-        []
+        ["Production:", projectInfo.prodName || '', "Director:", projectInfo.directorName || ''],
+        ["Contact:", projectInfo.contactNumber || '', "Email:", projectInfo.contactEmail || ''],
+        [], // Empty spacer row
+        [`Schedule Break: ${scheduleBreakName}`],
+        [`Sequence: ${sequenceName}`],
+        [] // Empty spacer row
     ];
+
+    // 2. Create a worksheet from the header array
     const worksheet = XLSX.utils.aoa_to_sheet(header);
-    worksheet['!merges'] = [{ s: { r: 0, c: 1 }, e: { r: 0, c: 2 } }, { s: { r: 1, c: 1 }, e: { r: 1, c: 2 } }];
-    XLSX.utils.sheet_add_json(worksheet, activeSequence.scenes, { origin: "A4", skipHeader: false });
+
+    // 3. Add the main scene data, starting after the header
+    XLSX.utils.sheet_add_json(worksheet, activeScenes, {
+        origin: `A${header.length + 1}`, // Start data on the next row
+        skipHeader: false
+    });
+
+    // 4. Create a workbook and download
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, activeSequence.name);
-    XLSX.writeFile(workbook, `${activeSequence.name}_Schedule.xlsx`);
+    XLSX.utils.book_append_sheet(workbook, worksheet, sequenceName.replace(/[/\\?*:[\]]/g, '')); // Sanitize sheet name
+    XLSX.writeFile(workbook, `${sequenceName}_Schedule.xlsx`);
 }
 
 async function shareProject() {
