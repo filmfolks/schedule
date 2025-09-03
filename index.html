@@ -858,16 +858,39 @@
 
             // LOGIC FOR "Save Full Project Excel"
             if (isFullProject) {
+                console.log("Starting full project export...");
+
+                // This loop goes through every item you have in the Sort Panel.
                 projectData.panelItems.forEach(item => {
-                    if (item.type === 'sequence' && item.scenes.length > 0) {
+                    // It checks if the item is a sequence and if it actually contains scenes.
+                    // Sequences without scenes will be skipped.
+                    if (item.type === 'sequence' && item.scenes && item.scenes.length > 0) {
+                        console.log(`Found sequence with scenes: "${item.name}". Creating sheet...`);
+                        
+                        // A new sheet is created for this sequence.
                         const worksheet = createSheet(item.scenes, item.name);
-                        XLSX.utils.book_append_sheet(workbook, worksheet, item.name.replace(/[/\\?*:[\]]/g, '').substring(0, 31));
+                        
+                        // The new sheet is appended to the Excel workbook. This does NOT overwrite previous sheets.
+                        const safeSheetName = item.name.replace(/[/\\?*:[\]]/g, '').substring(0, 31);
+                        XLSX.utils.book_append_sheet(workbook, worksheet, safeSheetName);
                     }
                 });
-                if(workbook.SheetNames.length === 0){ alert("No scenes in any sequence to export."); return;}
+                
+                // After checking all sequences, we check if any sheets were created.
+                if(workbook.SheetNames.length === 0){ 
+                    alert("Export failed: No sequences with scenes were found in your project."); 
+                    return;
+                }
+                
+                console.log(`Exporting workbook with ${workbook.SheetNames.length} sheets: ${workbook.SheetNames.join(', ')}`);
+
+                // The workbook, now containing all the sheets, is saved to a single file.
                 XLSX.writeFile(workbook, `${(projectInfo.prodName || 'FullProject').replace(/[^a-zA-Z0-9]/g, '_')}_Schedule.xlsx`);
-            
-            // LOGIC FOR "Export Visible Scenes" from the Sort Panel
+                
+                // This new confirmation alert gives you clear feedback.
+                alert(`Successfully exported ${workbook.SheetNames.length} sequence(s) into a single Excel file.\n\nPlease check the tabs at the bottom of the Excel window to see all the sheets.`);
+
+            // LOGIC FOR "Export Visible Scenes" from the Sort Panel (this logic remains unchanged)
             } else {
                 const activeSequence = projectData.panelItems.find(item => item.id === projectData.activeItemId);
                 if (!activeSequence) { alert("Please select a sequence to export."); return; }
