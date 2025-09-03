@@ -130,14 +130,18 @@
         <div class="panel-header">
             <h3>Sort Panel</h3>
             <div class="panel-actions">
+                <select id="filter-by-select" class="panel-sort">
+                    <option value="all">Show All Scenes</option>
+                    <option value="date">Filter by Date</option>
+                    <option value="status">Filter by Status</option>
+                </select>
                 <button id="add-schedule-break-btn" class="icon-btn small" title="Add Schedule Break"><i class="fas fa-plus"></i></button>
-                <select id="sort-by-select" class="panel-sort"><option value="default">Sort by...</option><option value="location">Location</option><option value="date">Date</option><option value="status">Status</option></select>
-                <button id="export-panel-btn" class="icon-btn small" title="Export Current Sequence"><i class="fas fa-download"></i></button>
+                <button id="export-panel-btn" class="icon-btn small" title="Export Visible Scenes"><i class="fas fa-download"></i></button>
                 <button id="close-panel-btn" class="icon-btn small">&times;</button>
             </div>
         </div>
-        <div id="sequence-list" class="panel-list"></div>
-    </div>
+        <div id="sequence-list" class="panel-list">
+            </div>
 
     <script src="script.js"></script>
 </body>
