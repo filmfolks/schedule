@@ -53,17 +53,14 @@
             <form id="schedule-form" class="new-scene-form">
                 <h3>Add New Scene</h3>
                 <div class="form-grid">
-                    <input type="text" id="scene-number" placeholder="Scene #" required>
-                    <input type="text" id="scene-heading" placeholder="Scene Heading" required>
+                    <input type="text" id="scene-number" placeholder="Scene #" required><input type="text" id="scene-heading" placeholder="Scene Heading" required>
                     <div class="input-wrapper"><input type="date" id="scene-date" class="has-label" required><label for="scene-date">Date</label></div>
                     <div class="input-wrapper"><input type="time" id="scene-time" class="has-label" required><label for="scene-time">Time</label></div>
                     <select id="scene-type"><option value="INT">INT.</option><option value="EXT">EXT.</option><option value="INT/EXT">INT./EXT.</option></select>
-                    <input type="text" id="scene-location" placeholder="Location" required>
-                    <input type="text" id="scene-pages" placeholder="Pages (e.g., 1 3/8)">
+                    <input type="text" id="scene-location" placeholder="Location" required><input type="text" id="scene-pages" placeholder="Pages (e.g., 1 3/8)">
                     <input type="text" id="scene-duration" placeholder="Duration (e.g., 2h 30m)">
                     <select id="scene-status"><option value="Pending">Pending</option><option value="NOT SHOT">NOT SHOT</option><option value="Done">Done</option></select>
-                    <input type="text" id="scene-cast" placeholder="Cast (e.g., John, Mary)">
-                    <input type="text" id="scene-equipment" placeholder="Key Equipment">
+                    <input type="text" id="scene-cast" placeholder="Cast (e.g., John, Mary)"><input type="text" id="scene-equipment" placeholder="Key Equipment">
                     <input type="tel" id="scene-contact" placeholder="Contact Person (e.g., AD)">
                 </div>
                 <button type="submit" class="btn-primary">Add Scene</button>
@@ -78,10 +75,8 @@
             <span class="close-btn" id="close-project-modal">&times;</span>
             <h3>Project Information</h3>
             <div class="modal-form">
-                <input type="text" id="prod-name" placeholder="Production / Studio Name">
-                <input type="text" id="director-name" placeholder="Director Name">
-                <input type="tel" id="contact-number" placeholder="Contact Number">
-                <input type="email" id="contact-email" placeholder="Email">
+                <input type="text" id="prod-name" placeholder="Production / Studio Name"><input type="text" id="director-name" placeholder="Director Name">
+                <input type="tel" id="contact-number" placeholder="Contact Number"><input type="email" id="contact-email" placeholder="Email">
                 <button id="save-project-info-btn" class="btn-primary">Save Info</button>
             </div>
         </div>
@@ -133,12 +128,12 @@
     
     <div id="sequence-panel" class="side-panel">
         <div class="panel-header">
-            <h3>Sequences</h3>
+            <h3>Sort Panel</h3>
             <div class="panel-actions">
-                <button id="add-schedule-break-btn" class="icon-btn" title="Add Schedule Break">+</button>
+                <button id="add-schedule-break-btn" class="icon-btn small" title="Add Schedule Break"><i class="fas fa-plus"></i></button>
                 <select id="sort-by-select" class="panel-sort"><option value="default">Sort by...</option><option value="location">Location</option><option value="date">Date</option><option value="status">Status</option></select>
-                <button id="export-panel-btn" class="icon-btn" title="Export Current Sequence"><i class="fas fa-file-excel"></i></button>
-                <button id="close-panel-btn" class="icon-btn">&times;</button>
+                <button id="export-panel-btn" class="icon-btn small" title="Export Current Sequence"><i class="fas fa-download"></i></button>
+                <button id="close-panel-btn" class="icon-btn small">&times;</button>
             </div>
         </div>
         <div id="sequence-list" class="panel-list"></div>
