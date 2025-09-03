@@ -84,12 +84,15 @@ button { padding: 10px 20px; border-radius: 6px; font-size: 1rem; font-weight: 6
     min-width: 240px; box-shadow: 0 8px 16px rgba(0,0,0,0.5); z-index: 10;
     border-radius: 6px; overflow: hidden; margin-top: 10px; left: 0;
 }
-.dropdown-content a { color: var(--text-color); padding: 12px 20px; text-decoration: none; display: flex; align-items: center; gap: 10px; }
+.dropdown-content a { color: var(--text-color); padding: 12px 20px; text-decoration: none; display: flex; align-items: center; gap: 10px; cursor: pointer; }
 .dropdown-content a:hover { background-color: var(--primary-color); }
 .dropdown-header { padding: 8px 20px; font-size: 0.8rem; color: #9ca3af; text-transform: uppercase; letter-spacing: 0.5px; cursor: default; }
 .dropdown-item { padding-left: 35px !important; }
 .dropdown-divider { border: none; height: 1px; background-color: var(--border-color); margin: 8px 0; }
 .show { display: block; }
+.auto-save-status { margin-left: auto; font-size: 0.8rem; padding: 2px 8px; border-radius: 10px; }
+.auto-save-status.off { background-color: var(--danger-color); color: white; }
+.auto-save-status.on { background-color: var(--success-color); color: white; }
 
 /* --- Scene Strip Styles --- */
 .scene-strips-container { display: flex; flex-direction: column; gap: 8px; }
