@@ -924,7 +924,7 @@
             }
         }
         
-        async function shareScene(id) {
+      async function shareScene(id) {
             const activeSequence = projectData.panelItems.find(item => item.id === projectData.activeItemId);
             if (!activeSequence) return;
             const scene = activeSequence.scenes.find(s => s.id === id);
@@ -942,6 +942,7 @@
                     <div class="share-card-item"><strong>Time:</strong> ${formatTime12Hour(scene.time)}</div>
                     <div class="share-card-item"><strong>Location:</strong> ${scene.type}. ${scene.location}</div>
                     <div class="share-card-item"><strong>Cast:</strong> ${scene.cast || 'N/A'}</div>
+                    <div class="share-card-item"><strong>Contact:</strong> ${scene.contact || 'N/A'}</div>
                     <div class="share-card-item"><strong>Pages:</strong> ${scene.pages || 'N/A'}</div>
                     <div class="share-card-footer">
                         <div class="footer-project-info">
@@ -953,7 +954,7 @@
                 </div>
             `;
             
-            try {
+           try {
                 const canvas = await html2canvas(template, { useCORS: true, backgroundColor: '#1f2937' });
                 canvas.toBlob(async (blob) => {
                     const fileName = `Scene_${scene.number}.png`;
