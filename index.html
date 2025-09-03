@@ -23,17 +23,18 @@
             <div class="dropdown-container">
                 <button id="hamburger-btn" class="icon-btn"><i class="fas fa-bars"></i></button>
                 <div id="dropdown-menu" class="dropdown-content">
-                    <a href="#" id="new-project-btn"><i class="fas fa-plus-circle"></i> Project Info</a>
-                    <a href="#" id="open-project-btn"><i class="fas fa-folder-open"></i> Open Project</a>
-                    <a href="#" id="new-sequence-btn"><i class="fas fa-film"></i> New Sequence</a>
+                    <a id="new-project-btn"><i class="fas fa-plus-circle"></i> Project Info</a>
+                    <a id="open-project-btn"><i class="fas fa-folder-open"></i> Open Project</a>
+                    <a id="new-sequence-btn"><i class="fas fa-film"></i> New Sequence</a>
                     <div class="dropdown-header">Save as...</div>
-                    <a href="#" id="save-project-btn" class="dropdown-item"><i class="fas fa-save"></i> Save Project File</a>
-                    <a href="#" id="save-excel-btn" class="dropdown-item"><i class="fas fa-file-excel"></i> Save as Excel</a>
-                    <a href="#" id="share-project-btn"><i class="fas fa-share-alt"></i> Share Project...</a>
+                    <a id="save-project-btn" class="dropdown-item"><i class="fas fa-save"></i> Save Project File</a>
+                    <a id="save-excel-btn" class="dropdown-item"><i class="fas fa-file-excel"></i> Save Full Project Excel</a>
+                    <a id="share-project-btn"><i class="fas fa-share-alt"></i> Share Project...</a>
                     <hr class="dropdown-divider">
-                    <a href="#" id="clear-project-btn"><i class="fas fa-eraser"></i> Clear Project</a>
-                    <a href="#" id="info-btn"><i class="fas fa-info-circle"></i> Info</a>
-                    <a href="#" id="about-btn"><i class="fas fa-user-friends"></i> About</a>
+                    <a id="auto-save-btn"><i class="fas fa-sync-alt"></i> Auto Save <span id="auto-save-status" class="auto-save-status off">OFF</span></a>
+                    <a id="clear-project-btn"><i class="fas fa-eraser"></i> Clear Project</a>
+                    <a id="info-btn"><i class="fas fa-info-circle"></i> Info</a>
+                    <a id="about-btn"><i class="fas fa-user-friends"></i> About</a>
                 </div>
             </div>
         </div>
@@ -110,7 +111,7 @@
             <h3>Field & Button Guide</h3>
             <div class="info-content">
                 <p><strong>Scene #</strong>: The number of your scene (e.g., 1, 2A).</p>
-                <p><strong>Scene Heading</strong>: The description from your script (e.g., INT. CAFE - DAY).</p>
+                <p><strong>Scene Heading</strong>: Description from your script (e.g., INT. CAFE - DAY).</p>
                 <p><strong>Status</strong>: Mark scenes as <strong>Pending</strong>, <strong>NOT SHOT</strong>, or <strong>Done</strong>.</p>
                 <p><strong>Contact Person</strong>: This name is remembered for the next scene you add.</p>
                 <p><strong>Edit Button (✎)</strong>: Click to open a pop-up and edit all details for that scene.</p>
@@ -130,11 +131,7 @@
         <div class="panel-header">
             <h3>Sort Panel</h3>
             <div class="panel-actions">
-                <select id="filter-by-select" class="panel-sort">
-                    <option value="all">Show All Scenes</option>
-                    <option value="date">Filter by Date</option>
-                    <option value="status">Filter by Status</option>
-                </select>
+                <select id="filter-by-select" class="panel-sort"><option value="all">Show All Scenes</option><option value="date">Filter by Date</option><option value="status">Filter by Status</option></select>
                 <button id="add-schedule-break-btn" class="icon-btn small" title="Add Schedule Break"><i class="fas fa-plus"></i></button>
                 <button id="export-panel-btn" class="icon-btn small" title="Export Visible Scenes"><i class="fas fa-download"></i></button>
                 <button id="close-panel-btn" class="icon-btn small">&times;</button>
