@@ -938,18 +938,18 @@
                         <h1>Scene ${scene.number || 'N/A'}</h1>
                         <h2>${scene.heading || 'N/A'}</h2>
                     </div>
-                    <div class="share-card-item"><strong>Date:</strong> ${formatDateDDMMYYYY(scene.date)}</div>
-                    <div class="share-card-item"><strong>Time:</strong> ${formatTime12Hour(scene.time)}</div>
+                     <div class="share-card-item"><strong>Pages:</strong> ${scene.pages || 'N/A'}</div>
                     <div class="share-card-item"><strong>Location:</strong> ${scene.type}. ${scene.location}</div>
                     <div class="share-card-item"><strong>Cast:</strong> ${scene.cast || 'N/A'}</div>
+                     <div class="share-card-item"><strong>Date:</strong> ${formatDateDDMMYYYY(scene.date)}</div>
+                    <div class="share-card-item"><strong>Time:</strong> ${formatTime12Hour(scene.time)}</div>
                     <div class="share-card-item"><strong>Contact:</strong> ${scene.contact || 'N/A'}</div>
-                    <div class="share-card-item"><strong>Pages:</strong> ${scene.pages || 'N/A'}</div>
                     <div class="share-card-footer">
                         <div class="footer-project-info">
                             <div><strong>${projectInfo.prodName || 'Production'}</strong></div>
                             <div>${projectInfo.directorName ? 'Dir: ' + projectInfo.directorName : ''}</div>
                         </div>
-                        <div class="footer-brand">Powered by ToshooT</div>
+                        <div class="footer-brand">ToassisT App</div>
                     </div>
                 </div>
             `;
