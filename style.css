@@ -20,10 +20,11 @@ body {
 .page-header .header-right { justify-content: flex-end; }
 .page-header .header-center { flex: 2; text-align: center; }
 #app-title {
-    font-family: 'Courier Prime', monospace;  
+    font-family: "Courier Prime", monospace;
     margin: 0;
     font-size: 1.8rem;
     color: white;
+    font-weight: 700; /* Optional: Makes the font bolder */
 }
 /* --- Layout & Form Styles --- */
 .container { max-width: 1400px; margin: 20px auto; padding: 0 20px; }
