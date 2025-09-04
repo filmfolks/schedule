@@ -20,9 +20,11 @@ body {
 .page-header .header-right { justify-content: flex-end; }
 .page-header .header-center { flex: 2; text-align: center; }
 #app-title {
-    font-family: 'Roboto', sans-serif; margin: 0; font-size: 1.8rem; color: var(--primary-color);
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
+    font-size: 1.8rem;
+    color: white;
 }
-
 /* --- Layout & Form Styles --- */
 .container { max-width: 1400px; margin: 20px auto; padding: 0 20px; }
 .section { background-color: var(--surface-color); padding: 25px; border-radius: 8px; border: 1px solid var(--border-color); }
