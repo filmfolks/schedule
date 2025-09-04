@@ -2,13 +2,17 @@
 // --- GLOBAL STATE & DATA STRUCTURE ---
 // =================================================================
 let projectData = {
-    panelItems: [], // Holds both sequences and schedule breaks
+    panelItems: [],
     activeItemId: null,
     projectInfo: {}
 };
 let lastContactPerson = '';
 let activeFilter = { type: 'all', value: '' };
 let autoSaveInterval = null;
+
+// NEW: State for pagination
+let currentPage = 1;
+const scenesPerPage = 10;
 
 // =================================================================
 // --- INITIALIZATION ---
@@ -18,7 +22,6 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     loadProjectData();
     initializeDragAndDrop();
-    console.log("Initialization Complete. All functions are now active.");
 });
 
 // =================================================================
@@ -34,6 +37,19 @@ function setupEventListeners() {
         }
     };
     
+    const addDropdownListener = (id, handler) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.addEventListener('click', (e) => {
+                e.preventDefault();
+                handler(e);
+                document.getElementById('dropdown-menu').classList.remove('show');
+            });
+        } else {
+            console.error(`Error: Dropdown element with ID '${id}' not found.`);
+        }
+    };
+
     safeAddListener('schedule-form', 'submit', handleAddScene);
 
     const hamburgerBtn = document.getElementById('hamburger-btn');
@@ -42,24 +58,30 @@ function setupEventListeners() {
         hamburgerBtn.addEventListener('click', (e) => { e.stopPropagation(); dropdownMenu.classList.toggle('show'); });
     }
     
-    safeAddListener('new-project-btn', 'click', openProjectModal);
-    safeAddListener('open-project-btn', 'click', () => document.getElementById('file-input').click());
+    addDropdownListener('new-project-btn', openProjectModal);
+    addDropdownListener('open-project-btn', () => document.getElementById('file-input').click());
+    addDropdownListener('new-sequence-btn', handleNewSequence);
+    addDropdownListener('save-project-btn', saveProjectFile);
+    addDropdownListener('save-excel-btn', () => saveAsExcel(true));
+    addDropdownListener('share-project-btn', shareProject);
+    addDropdownListener('clear-project-btn', clearProject);
+    addDropdownListener('info-btn', () => document.getElementById('info-modal').style.display = 'block');
+    addDropdownListener('about-btn', () => document.getElementById('about-modal').style.display = 'block');
+    
+    const autoSaveBtn = document.getElementById('auto-save-btn');
+    if(autoSaveBtn) autoSaveBtn.addEventListener('click', (e) => { e.preventDefault(); toggleAutoSave(); });
+
     safeAddListener('file-input', 'change', openProjectFile);
-    safeAddListener('new-sequence-btn', 'click', handleNewSequence);
-    safeAddListener('save-project-btn', 'click', saveProjectFile);
-    safeAddListener('save-excel-btn', 'click', () => saveAsExcel(true));
-    safeAddListener('share-project-btn', 'click', shareProject);
-    safeAddListener('clear-project-btn', 'click', clearProject);
-    safeAddListener('info-btn', 'click', () => document.getElementById('info-modal').style.display = 'block');
-    safeAddListener('about-btn', 'click', () => document.getElementById('about-modal').style.display = 'block');
-    safeAddListener('auto-save-btn', 'click', toggleAutoSave);
 
     const sequencePanel = document.getElementById('sequence-panel');
     safeAddListener('sequence-hamburger-btn', 'click', () => sequencePanel.classList.add('open'));
     safeAddListener('close-panel-btn', 'click', () => sequencePanel.classList.remove('open'));
     safeAddListener('add-schedule-break-btn', 'click', handleAddScheduleBreak);
     safeAddListener('export-panel-btn', 'click', () => saveAsExcel(false));
-    safeAddListener('filter-by-select', 'change', handleFilterChange);
+    safeAddListener('filter-by-select', 'change', (e) => {
+        currentPage = 1; // Reset to first page on filter change
+        handleFilterChange(e);
+    });
 
     safeAddListener('close-project-modal', 'click', closeProjectModal);
     safeAddListener('save-project-info-btn', 'click', handleSaveProjectInfo);
@@ -115,10 +137,26 @@ function handleAddScheduleBreak() {
     renderSequencePanel();
 }
 
+function handleEditItem(id) {
+    const item = projectData.panelItems.find(i => i.id === id);
+    if (!item) return;
+
+    const newName = prompt("Enter the new name:", item.name);
+
+    if (newName !== null && newName.trim() !== "") {
+        item.name = newName.trim();
+        saveProjectData();
+        renderSequencePanel(); 
+        renderSchedule();    
+    }
+}
+
+
 function setActiveItem(id) {
     const item = projectData.panelItems.find(i => i.id === id);
     if (item && item.type === 'sequence') {
         projectData.activeItemId = id;
+        currentPage = 1; // Reset to page 1 when switching sequences
         saveProjectData();
         renderSchedule();
         renderSequencePanel();
@@ -131,49 +169,110 @@ function renderSequencePanel() {
     listContainer.innerHTML = '';
     projectData.panelItems.forEach(item => {
         const element = document.createElement('div');
+        const itemName = document.createElement('span');
+        itemName.className = 'panel-item-name';
+        itemName.textContent = item.name;
+
+        const editBtn = document.createElement('button');
+        editBtn.className = 'edit-item-btn';
+        editBtn.innerHTML = '<i class="fas fa-pencil-alt"></i>';
+        editBtn.title = 'Edit Name';
+        editBtn.onclick = (e) => {
+            e.stopPropagation(); 
+            handleEditItem(item.id);
+        };
+
         if (item.type === 'sequence') {
             element.className = `sequence-item ${item.id === projectData.activeItemId ? 'active' : ''}`;
-            element.textContent = item.name;
             element.onclick = () => setActiveItem(item.id);
         } else if (item.type === 'schedule_break') {
             element.className = 'schedule-break-item';
-            element.textContent = item.name;
         }
+
+        element.appendChild(itemName);
+        element.appendChild(editBtn);
         listContainer.appendChild(element);
     });
 }
+
 
 // =================================================================
 // --- FILTERING LOGIC ---
 // =================================================================
 function handleFilterChange(e) {
-    const filterType = e.target.value;
-    document.getElementById('filter-by-select').value = 'all'; 
+    renderFilterControls();
+}
+
+function renderFilterControls() {
+    const filterContainer = document.getElementById('filter-controls');
+    filterContainer.innerHTML = '';
+    const filterType = document.getElementById('filter-by-select').value;
+
     if (filterType === 'all') {
         activeFilter = { type: 'all', value: '' };
-    } else {
-        let filterValue = prompt(`Enter value to filter by ${filterType}:`);
-        if (filterValue !== null) {
-            activeFilter = { type: filterType, value: filterValue.trim().toLowerCase() };
-        } else {
-            activeFilter = { type: 'all', value: '' };
-        }
+        renderSchedule();
+        return;
     }
-    renderSchedule();
+
+    let inputElement;
+    if (filterType === 'date') {
+        inputElement = document.createElement('input');
+        inputElement.type = 'date';
+        inputElement.className = 'panel-sort';
+    } else if (filterType === 'status') {
+        inputElement = document.createElement('select');
+        inputElement.className = 'panel-sort';
+        inputElement.innerHTML = `
+            <option value="">Select Status</option>
+            <option value="Pending">Pending</option>
+            <option value="NOT SHOT">NOT SHOT</option>
+            <option value="Done">Done</option>
+        `;
+    } else if (filterType === 'cast') {
+        inputElement = document.createElement('input');
+        inputElement.type = 'text';
+        inputElement.placeholder = 'Enter Cast Name';
+        inputElement.className = 'panel-sort';
+    }
+
+    if (inputElement) {
+        const updateFilter = (e) => {
+            currentPage = 1; // Reset to first page on filter value change
+            activeFilter = { type: filterType, value: e.target.value.trim().toLowerCase() };
+            renderSchedule();
+        };
+        inputElement.addEventListener('change', updateFilter);
+        if (inputElement.type === 'text') {
+             inputElement.addEventListener('keyup', updateFilter);
+        }
+        filterContainer.appendChild(inputElement);
+        activeFilter = { type: filterType, value: '' };
+        renderSchedule();
+    }
 }
 
 function getVisibleScenes() {
     const activeSequence = projectData.panelItems.find(item => item.id === projectData.activeItemId);
     if (!activeSequence || activeSequence.type !== 'sequence') return [];
     
-    const allScenes = [...activeSequence.scenes];
+    const allScenes = activeSequence.scenes;
 
-    if (activeFilter.type === 'all') { return allScenes; }
+    if (activeFilter.type === 'all' || !activeFilter.value) { return allScenes; }
 
     return allScenes.filter(scene => {
-        const sceneValue = (scene[activeFilter.type] || '').toLowerCase();
-        return sceneValue.includes(activeFilter.value);
+        if (!scene.hasOwnProperty(activeFilter.type)) return false;
+        const sceneValue = (scene[activeFilter.type] || '').toString().toLowerCase();
+        const filterValue = activeFilter.value.toLowerCase();
+        return sceneValue.includes(filterValue);
     });
+}
+
+function resetFilter() {
+    activeFilter = { type: 'all', value: '' };
+    currentPage = 1;
+    const filterSelect = document.getElementById('filter-by-select');
+    if (filterSelect) filterSelect.value = 'all';
+    renderFilterControls();
 }
 
 // =================================================================
@@ -207,26 +306,37 @@ function handleAddScene(e) {
     document.getElementById('scene-contact').value = lastContactPerson;
 }
 
+/**
+ * MODIFIED: This function now implements pagination.
+ */
 function renderSchedule() {
     const container = document.getElementById('scene-strips-container');
     const display = document.getElementById('active-sequence-display');
     container.innerHTML = '';
     
     const activeSequence = projectData.panelItems.find(item => item.id === projectData.activeItemId);
-    
     if (!activeSequence || activeSequence.type !== 'sequence') {
         display.textContent = 'No active sequence. Create or select a sequence.';
+        renderPaginationControls(0, 0); // Clear pagination controls
         return;
     }
-
+    
     display.textContent = `Current Sequence: ${activeSequence.name}`;
+    const allMatchingScenes = getVisibleScenes();
     
-    const scenesToRender = getVisibleScenes();
-    
-    if (scenesToRender.length === 0 && activeFilter.type !== 'all') {
-        container.innerHTML = `<p style="text-align:center; color: #9ca3af;">No scenes match the current filter.</p>`;
+    // Pagination Calculations
+    const startIndex = (currentPage - 1) * scenesPerPage;
+    const endIndex = startIndex + scenesPerPage;
+    const paginatedScenes = allMatchingScenes.slice(startIndex, endIndex);
+
+    if (allMatchingScenes.length === 0) {
+        if (activeFilter.type !== 'all') {
+            container.innerHTML = `<p style="text-align:center; color: #9ca3af;">No scenes match the current filter.</p>`;
+        } else {
+             container.innerHTML = `<p style="text-align:center; color: #9ca3af;">No scenes yet. Add one below!</p>`;
+        }
     } else {
-        scenesToRender.forEach(scene => {
+        paginatedScenes.forEach(scene => {
             const stripWrapper = document.createElement('div');
             stripWrapper.className = 'scene-strip-wrapper';
             const statusClass = scene.status.replace(/\s+/g, '-').toLowerCase();
@@ -251,7 +361,53 @@ function renderSchedule() {
             container.appendChild(stripWrapper);
         });
     }
+    
+    // Render the pagination controls
+    renderPaginationControls(allMatchingScenes.length, scenesPerPage);
 }
+
+/**
+ * NEW: Renders the pagination controls (buttons, page info).
+ */
+function renderPaginationControls(totalItems, itemsPerPage) {
+    const container = document.getElementById('pagination-controls');
+    container.innerHTML = '';
+
+    if (totalItems <= itemsPerPage) return; // No need for controls if everything fits on one page
+
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+
+    const prevButton = document.createElement('button');
+    prevButton.textContent = 'Previous';
+    prevButton.className = 'btn-primary';
+    prevButton.disabled = currentPage === 1;
+    prevButton.addEventListener('click', () => {
+        if (currentPage > 1) {
+            currentPage--;
+            renderSchedule();
+        }
+    });
+
+    const pageInfo = document.createElement('span');
+    pageInfo.className = 'page-info';
+    pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+
+    const nextButton = document.createElement('button');
+    nextButton.textContent = 'Next';
+    nextButton.className = 'btn-primary';
+    nextButton.disabled = currentPage === totalPages;
+    nextButton.addEventListener('click', () => {
+        if (currentPage < totalPages) {
+            currentPage++;
+            renderSchedule();
+        }
+    });
+
+    container.appendChild(prevButton);
+    container.appendChild(pageInfo);
+    container.appendChild(nextButton);
+}
+
 
 function deleteScene(id) {
     const activeSequence = projectData.panelItems.find(item => item.id === projectData.activeItemId);
@@ -262,25 +418,21 @@ function deleteScene(id) {
 }
 
 // =================================================================
-// --- DATA PERSISTENCE & PROJECT FILES ---
+// --- DATA PERSISTENCE & PROJECT FILES (No Changes Below This Line) ---
 // =================================================================
 function saveProjectData(isBackup = false) {
     const key = isBackup ? 'projectData_backup' : 'projectData';
     localStorage.setItem(key, JSON.stringify(projectData));
-    if(!isBackup) console.log(`Data saved at ${new Date().toLocaleTimeString()}`);
 }
-
 function loadProjectData() {
     let savedData = localStorage.getItem('projectData');
     const backupData = localStorage.getItem('projectData_backup');
-
     if (!savedData && backupData) {
         if (confirm("No main save data found, but a backup exists. Would you like to restore the backup?")) {
             savedData = backupData;
             localStorage.setItem('projectData', backupData);
         }
     }
-
     projectData = savedData ? JSON.parse(savedData) : { panelItems: [], activeItemId: null, projectInfo: {} };
     if (!projectData.projectInfo) projectData.projectInfo = {};
     if (!projectData.panelItems) projectData.panelItems = [];
@@ -292,12 +444,13 @@ function loadProjectData() {
     if (activeSequence && activeSequence.scenes && activeSequence.scenes.length > 0) {
         lastContactPerson = activeSequence.scenes[activeSequence.scenes.length - 1].contact || '';
     }
+    const contactInput = document.getElementById('scene-contact');
+    if (contactInput) contactInput.value = lastContactPerson;
     renderSchedule();
     renderSequencePanel();
 }
-
 function clearProject() {
-    if (confirm('Are you sure you want to clear the entire project? This will delete all sequences and scenes.')) {
+    if (confirm('Are you sure you want to clear the entire project? This action cannot be undone.')) {
         projectData = { panelItems: [], activeItemId: null, projectInfo: {} };
         lastContactPerson = '';
         saveProjectData();
@@ -305,33 +458,60 @@ function clearProject() {
         renderSequencePanel();
     }
 }
-
 function saveProjectFile() {
-    const blob = new Blob([JSON.stringify(projectData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${projectData.projectInfo.prodName || 'Schedule'}.filmproj`;
-    a.click();
-    URL.revokeObjectURL(url);
+     try {
+        const projectInfo = projectData.projectInfo || {};
+        const projectName = projectInfo.prodName || 'UntitledProject';
+        const dataStr = JSON.stringify(projectData, null, 2);
+        const dataBlob = new Blob([dataStr], {type: "application/json"});
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `${projectName.replace(/[^a-zA-Z0-9]/g, '_')}.filmproj`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error("Error saving project file:", error);
+        alert("Could not save project file. See console for details.");
+    }
 }
-
 function openProjectFile(event) {
-    const file = event.target.files[0]; if (!file) return;
+    const file = event.target.files[0];
+    if (!file) { return; }
     const reader = new FileReader();
     reader.onload = (e) => {
         try {
-            const loadedData = JSON.parse(e.target.result);
-            if (loadedData && loadedData.panelItems && loadedData.hasOwnProperty('activeItemId')) {
-                projectData = loadedData;
-                saveProjectData();
-                alert('Project loaded successfully!');
-                loadProjectData();
-            } else { alert('Error: Invalid project file format.'); }
-        } catch (error) { alert('Error: Could not read project file.'); }
+            const data = JSON.parse(e.target.result);
+            if (data && typeof data === 'object' && Array.isArray(data.panelItems) && data.hasOwnProperty('projectInfo')) {
+                if (confirm("This will replace your current project. Are you sure you want to proceed?")) {
+                    projectData = data;
+                    if (!projectData.projectInfo) projectData.projectInfo = {};
+                    if (!projectData.panelItems) projectData.panelItems = [];
+                    if (projectData.activeItemId === null && projectData.panelItems.length > 0) {
+                        const firstSequence = projectData.panelItems.find(i => i.type === 'sequence');
+                        if (firstSequence) projectData.activeItemId = firstSequence.id;
+                    }
+                    saveProjectData();
+                    loadProjectData();
+                    alert("Project loaded successfully.");
+                }
+            } else {
+                alert("Invalid project file format.");
+            }
+        } catch (error) {
+            console.error("Error opening project file:", error);
+            alert("Could not open project file. It may be corrupted or in the wrong format.");
+        } finally {
+            event.target.value = '';
+        }
+    };
+    reader.onerror = () => {
+        alert("Error reading file.");
+        event.target.value = '';
     };
     reader.readAsText(file);
-    event.target.value = '';
 }
 
 // =================================================================
@@ -395,13 +575,15 @@ function handleSaveChanges() {
     closeEditModal();
 }
 function handleDeleteFromModal() {
-    const sceneId = parseInt(document.getElementById('edit-scene-id').value);
-    deleteScene(sceneId);
-    closeEditModal();
+    if(confirm("Are you sure you want to delete this scene?")) {
+        const sceneId = parseInt(document.getElementById('edit-scene-id').value);
+        deleteScene(sceneId);
+        closeEditModal();
+    }
 }
 
 // =================================================================
-// --- EXPORT & SHARE & UTILITIES ---
+// --- EXPORT & SHARE FUNCTIONS ---
 // =================================================================
 function saveAsExcel(isFullProject = false) {
     const projectInfo = projectData.projectInfo || {};
@@ -409,7 +591,7 @@ function saveAsExcel(isFullProject = false) {
 
     const createSheet = (scenes, sheetName) => {
         let scheduleBreakName = 'Uncategorized';
-        const sequenceIndex = projectData.panelItems.findIndex(item => item.name === sheetName);
+        const sequenceIndex = projectData.panelItems.findIndex(item => item.name === sheetName && item.type === 'sequence');
         if (sequenceIndex > -1) {
             for (let i = sequenceIndex - 1; i >= 0; i--) {
                 if (projectData.panelItems[i].type === 'schedule_break') {
@@ -418,40 +600,153 @@ function saveAsExcel(isFullProject = false) {
                 }
             }
         }
-        const header = [
-            ["Production:", projectInfo.prodName || 'N/A', "Director:", projectInfo.directorName || 'N/A'],
-            ["Contact:", projectInfo.contactNumber || 'N/A', "Email:", projectInfo.contactEmail || 'N/A'], [],
-            [`Schedule Break: ${scheduleBreakName}`], [`Sequence: ${sheetName}`], []
+
+        const projectHeader = [
+            ["Production:", projectInfo.prodName || 'N/A', null, "Director:", projectInfo.directorName || 'N/A'],
+            ["Contact:", projectInfo.contactNumber || 'N/A', null, "Email:", projectInfo.contactEmail || 'N/A'],
+            [],
+            [`Schedule Break: ${scheduleBreakName}`],
+            [`Sequence: ${sheetName}`],
+            []
         ];
-        const formattedScenes = scenes.map(s => ({...s, date: formatDateDDMMYYYY(s.date)}));
-        const worksheet = XLSX.utils.aoa_to_sheet(header);
-        worksheet['!merges'] = [{ s: { r: 0, c: 1 }, e: { r: 0, c: 2 } }, { s: { r: 1, c: 1 }, e: { r: 1, c: 2 } }];
-        XLSX.utils.sheet_add_json(worksheet, formattedScenes, { origin: `A${header.length + 1}`, skipHeader: false });
+        const tableHeader = ['Scene #', 'Scene Heading', 'Date', 'Time', 'Type', 'Location', 'Pages', 'Duration', 'Status', 'Cast', 'Key Equipment', 'Contact'];
+        
+        const tableBody = scenes.map(s => [
+            s.number, s.heading, formatDateDDMMYYYY(s.date), s.time, s.type, s.location, s.pages, s.duration, s.status, s.cast, s.equipment, s.contact
+        ]);
+
+        const fullSheetData = projectHeader.concat([tableHeader]).concat(tableBody);
+        const worksheet = XLSX.utils.aoa_to_sheet(fullSheetData);
+
+        const numCols = tableHeader.length - 1;
+        worksheet['!merges'] = [
+            { s: { r: 0, c: 1 }, e: { r: 0, c: 2 } }, { s: { r: 0, c: 4 }, e: { r: 0, c: numCols } },
+            { s: { r: 1, c: 1 }, e: { r: 1, c: 2 } }, { s: { r: 1, c: 4 }, e: { r: 1, c: numCols } },
+            { s: { r: 3, c: 0 }, e: { r: 3, c: numCols } }, { s: { r: 4, c: 0 }, e: { r: 4, c: numCols } }
+        ];
+        
+        if (scenes.length > 0) {
+             const colWidths = tableHeader.map((_, i) => {
+                const allValues = [tableHeader[i] || ''].concat(tableBody.map(row => (row[i] || '').toString()));
+                const maxLength = Math.max(...allValues.map(val => val.length));
+                return { wch: Math.min(50, Math.max(12, maxLength + 2)) };
+            });
+            worksheet['!cols'] = colWidths;
+        }
+
         return worksheet;
     };
 
     if (isFullProject) {
+        console.log("Starting full project export...");
         projectData.panelItems.forEach(item => {
-            if (item.type === 'sequence' && item.scenes.length > 0) {
+            if (item.type === 'sequence' && item.scenes && item.scenes.length > 0) {
+                console.log(`Found sequence with scenes: "${item.name}". Creating sheet...`);
                 const worksheet = createSheet(item.scenes, item.name);
-                XLSX.utils.book_append_sheet(workbook, worksheet, item.name.replace(/[/\\?*:[\]]/g, ''));
+                const safeSheetName = item.name.replace(/[/\\?*:[\]]/g, '').substring(0, 31);
+                XLSX.utils.book_append_sheet(workbook, worksheet, safeSheetName);
             }
         });
-        if(workbook.SheetNames.length === 0){ alert("No scenes in any sequence to export."); return;}
-        XLSX.writeFile(workbook, `${projectInfo.prodName || 'FullProject'}_Schedule.xlsx`);
+        
+        if(workbook.SheetNames.length === 0){ 
+            alert("Export failed: No sequences with scenes were found in your project."); 
+            return;
+        }
+        
+        console.log(`Exporting workbook with ${workbook.SheetNames.length} sheets: ${workbook.SheetNames.join(', ')}`);
+        XLSX.writeFile(workbook, `${(projectInfo.prodName || 'FullProject').replace(/[^a-zA-Z0-9]/g, '_')}_Schedule.xlsx`);
+        alert(`Successfully exported ${workbook.SheetNames.length} sequence(s) into a single Excel file.\n\nPlease check the tabs at the bottom of the Excel window to see all the sheets.`);
     } else {
         const activeSequence = projectData.panelItems.find(item => item.id === projectData.activeItemId);
         if (!activeSequence) { alert("Please select a sequence to export."); return; }
         const scenesToExport = getVisibleScenes();
         if (scenesToExport.length === 0) { alert(`No visible scenes in "${activeSequence.name}" to export.`); return; }
+        
         const worksheet = createSheet(scenesToExport, activeSequence.name);
-        XLSX.utils.book_append_sheet(workbook, worksheet, activeSequence.name.replace(/[/\\?*:[\]]/g, ''));
-        XLSX.writeFile(workbook, `${activeSequence.name}_Schedule.xlsx`);
+        XLSX.utils.book_append_sheet(workbook, worksheet, activeSequence.name.replace(/[/\\?*:[\]]/g, '').substring(0, 31));
+        XLSX.writeFile(workbook, `${activeSequence.name.replace(/[^a-zA-Z0-9]/g, '_')}_Schedule.xlsx`);
     }
 }
 
-async function shareProject() { /* ... full function ... */ }
-async function shareScene(id) { /* ... full function ... */ }
+async function shareProject() {
+    const projectInfo = projectData.projectInfo || {};
+    const totalSequences = projectData.panelItems.filter(i => i.type === 'sequence').length;
+    const totalScenes = projectData.panelItems
+        .filter(i => i.type === 'sequence')
+        .reduce((sum, seq) => sum + (seq.scenes ? seq.scenes.length : 0), 0);
+
+    const shareText = `*ToshooT Project Summary*\nProduction: ${projectInfo.prodName || 'N/A'}\nDirector: ${projectInfo.directorName || 'N/A'}\nContact: ${projectInfo.contactNumber || 'N/A'}\n\nTotal Sequences: ${totalSequences}\nTotal Scenes: ${totalScenes}`;
+
+    if (navigator.share) {
+        try {
+            await navigator.share({ title: `Project: ${projectInfo.prodName || 'Untitled'}`, text: shareText });
+        } catch (err) { console.error("Share failed:", err); }
+    } else {
+        try {
+            await navigator.clipboard.writeText(shareText);
+            alert("Project info copied to clipboard!");
+        } catch (err) { alert("Sharing is not supported on this browser, and copying to clipboard failed."); }
+    }
+}
+
+async function shareScene(id) {
+    const activeSequence = projectData.panelItems.find(item => item.id === projectData.activeItemId);
+    if (!activeSequence) return;
+    const scene = activeSequence.scenes.find(s => s.id === id);
+    if (!scene) return;
+    const projectInfo = projectData.projectInfo || {};
+
+    const template = document.getElementById('share-card-template');
+    template.innerHTML = `
+        <div class="share-card-content">
+            <div class="share-card-header">
+                <h1>Scene ${scene.number || 'N/A'}</h1>
+                <h2>${scene.heading || 'N/A'}</h2>
+            </div>
+             <div class="share-card-item"><strong>Pages:</strong> ${scene.pages || 'N/A'}</div>
+            <div class="share-card-item"><strong>Location:</strong> ${scene.type}. ${scene.location}</div>
+            <div class="share-card-item"><strong>Cast:</strong> ${scene.cast || 'N/A'}</div>
+             <div class="share-card-item"><strong>Date:</strong> ${formatDateDDMMYYYY(scene.date)}</div>
+            <div class="share-card-item"><strong>Time:</strong> ${formatTime12Hour(scene.time)}</div>
+            <div class="share-card-item"><strong>Contact:</strong> ${scene.contact || 'N/A'}</div>
+            <div class="share-card-footer">
+                <div class="footer-project-info">
+                    <div><strong>${projectInfo.prodName || 'Production'}</strong></div>
+                    <div>${projectInfo.directorName ? 'Dir: ' + projectInfo.directorName : ''}</div>
+                </div>
+                <div class="footer-brand">ToassisT App</div>
+            </div>
+        </div>
+    `;
+    
+   try {
+        const canvas = await html2canvas(template, { useCORS: true, backgroundColor: '#1f2937' });
+        canvas.toBlob(async (blob) => {
+            const fileName = `Scene_${scene.number}.png`;
+            const file = new File([blob], fileName, { type: 'image/png' });
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                await navigator.share({
+                    title: `Shooting Info: Scene ${scene.number}`,
+                    text: `Details for Scene ${scene.number} - ${scene.heading}`,
+                    files: [file]
+                });
+            } else {
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = fileName;
+                link.click();
+                URL.revokeObjectURL(link.href);
+            }
+        }, 'image/png');
+    } catch (err) {
+        console.error("Failed to share scene:", err);
+        alert("Could not generate shareable image.");
+    }
+}
+
+// =================================================================
+// --- UTILITY FUNCTIONS ---
+// =================================================================
 function formatTime12Hour(timeString) {
     if (!timeString) return "N/A";
     const [hour, minute] = timeString.split(':');
@@ -472,7 +767,6 @@ function toggleAutoSave() {
         autoSaveInterval = null;
         statusEl.textContent = 'OFF';
         statusEl.className = 'auto-save-status off';
-        console.log('Auto-save stopped.');
     } else {
         autoSaveInterval = setInterval(() => {
             saveProjectData(false); 
@@ -480,14 +774,6 @@ function toggleAutoSave() {
         }, 120000); 
         statusEl.textContent = 'ON';
         statusEl.className = 'auto-save-status on';
-        console.log('Auto-save started.');
         alert('Auto-save is now ON. Your project will be saved to this browser\'s storage every 2 minutes.');
     }
 }
-function resetFilter() {
-    activeFilter = { type: 'all', value: '' };
-    document.getElementById('filter-by-select').value = 'all';
-}
-    </script>
-</body>
-</html>
